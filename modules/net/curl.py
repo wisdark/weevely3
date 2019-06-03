@@ -2,8 +2,11 @@ from core.vectors import PhpCode, ShellCmd, ModuleExec, PhpFile, Os
 from core.module import Module
 from core import modules
 from core import messages
+from utils.strings import str2hex
 from core.loggers import log
 import os
+from ast import literal_eval
+import urllib
 
 class Curl(Module):
 
@@ -44,10 +47,14 @@ class Curl(Module):
               payload_path = os.path.join(self.folder, 'php_httprequest1.tpl'),
               name = 'php_httprequest1',
             ),
-            ShellCmd(
-              payload = """curl -s -i ${ "-A '%s'" % user_agent if user_agent else "" } ${ '--connect-timeout %i' % connect_timeout } ${ '-X %s' % request if (not data and request) else '' } ${ " ".join([ "-H '%s'" % h for h in header ]) } ${ "-b '%s'" % cookie if cookie else '' } ${ ' '.join([ "-d '%s'" % d for d in data ]) } '${ url }'""",
-              name = 'sh_curl'
-            )
+            
+            # TODO: fix this, it fails the "POST request with binary string" test
+            # due to some bash limitation with null bytes.
+            
+            # ShellCmd(
+            #   payload = """curl -s -i ${ '-A "$(env echo -ne \"%s\")"' % user_agent if user_agent else "" } ${ '--connect-timeout %i' % connect_timeout } ${ '-X %s' % request if (not data and request) else '' } ${ " ".join([ '-H "$(env echo -ne \"%s\")"' % h for h in header ]) } ${ '-b "$(env echo -ne \"%s\")"' % cookie if cookie else '' } ${ '--data-binary $(env echo -ne "%s")' % ' '.join(data) if data else '' } ${ '$(env echo -ne "%s")' % url }""",
+            #   name = 'sh_curl'
+            # )
             ]
         )
 
@@ -62,8 +69,8 @@ class Curl(Module):
           { 'name' : '--user-agent', 'dest' : 'user_agent' },
           { 'name' : '-A', 'dest' : 'user_agent' },
           { 'name' : '--connect-timeout', 'type' : int, 'default' : 5, 'help' : 'Default: 2' },
-          { 'name' : '--request', 'dest' : 'request', 'choices' : ( 'GET', 'HEAD', 'POST', 'PUT' ), 'default' : 'GET' },
-          { 'name' : '-X', 'dest' : 'request', 'choices' : ( 'GET', 'HEAD', 'POST', 'PUT' ), 'default' : 'GET' },
+          { 'name' : '--request', 'dest' : 'request', 'choices' : ( 'GET', 'HEAD', 'POST', 'PUT', 'OPTIONS' ), 'default' : 'GET' },
+          { 'name' : '-X', 'dest' : 'request', 'choices' : ( 'GET', 'HEAD', 'POST', 'PUT', 'OPTIONS' ), 'default' : 'GET' },
           { 'name' : '--output', 'dest' : 'output' },
           { 'name' : '-o', 'dest' : 'output' },
           { 'name' : '-i', 'dest' : 'include_headers', 'help' : 'Include response headers', 'action' : 'store_true', 'default' : False },
@@ -71,10 +78,28 @@ class Curl(Module):
           { 'name' : '-vector', 'choices' : self.vectors.get_names(), 'default' : 'file_get_contents' }
         ])
 
+    def _encode(self):
+        
+        self.args['url'] = str2hex(self.args['url'])
+    
+        if self.args['data']:
+            self.args['data'] = [ str2hex(x) for x in self.args['data'] ]
+        
+        if self.args['user_agent']:
+            self.args['user_agent'] = str2hex(self.args['user_agent'])
+        
+        if self.args['cookie']:
+            self.args['cookie'] = str2hex(self.args['cookie'])
+
+        if self.args['header']:
+            self.args['header'] = [ str2hex(x) for x in self.args['header'] ]
+
     def run(self):
 
         headers = []
         saved = None
+        
+        self._encode()
 
         vector_name, result = self.vectors.find_first_result(
                 names = [ self.args.get('vector') ],

@@ -1,4 +1,4 @@
-version = '3.5'
+version = '3.7.0'
 
 class generic:
     file_s_not_found = "File '%s' not found"
@@ -11,13 +11,13 @@ class generic:
 [+] weevely %s
 [!] Error: %s
 
-[+] Run terminal to the target
+[+] Run terminal or command on the target
     weevely <URL> <password> [cmd]
 
-[+] Load session file
+[+] Recover an existing session
     weevely session <path> [cmd]
 
-[+] Generate backdoor agent
+[+] Generate new agent
     weevely generate <password> <path>
 
 """
@@ -200,11 +200,10 @@ class module_net_curl:
     unexpected_response = 'Unexpected response, please check URL reachability'
 
 class module_net_proxy:
-    https_not_implemented = 'HTTPS connection is not implemented, use module :net_phpproxy'
-    request_timed_out_s = 'Request timed out: %s'
-    proxy_set_address_s_i = 'Set proxy address to your browser as \'http://%s:%i\' and start browsing'
-    proxy_started_background = 'Background proxy started, will shutdown at weevely exit'
-    proxy_started_foreground = 'Foreground proxy started, press Ctrl-C to force shutdown'
+    proxy_starting_s_i = 'Starting HTTP/HTTPS proxy at \'http://%s:%i\''
+    proxy_set_proxy = 'Set the proxy to tunnel through the target. Visit \'http://weevely/\' to install the certificate'
+    proxy_started_background = 'Proxy has been started in background and will shutdown at exit'
+    proxy_started_foreground = 'Foreground proxy has been started, press Ctrl-C to stop it'
 
 class module_net_phpproxy:
     phpproxy_installed_to_s_browser_to_s = 'PHP proxy installed to \'%s\', browse \'%s\' with your browser'
@@ -247,7 +246,7 @@ class module_shell_sh:
 class generate:
     error_agent_template_s_s = 'Error with agent template \'%s\': %s'
     error_obfuscator_template_s_s = 'Error with obfuscator template \'%s\': %s'
-    generated_backdoor_with_password_s_in_s_size_i = 'Generated backdoor with password \'%s\' in \'%s\' of %i byte size.'
+    generated_backdoor_with_password_s_in_s_size_i = 'Generated \'%s\' with password \'%s\' of %i byte size.'
 
 class utils_code:
     minify_php_missing_binary = 'Missing PHP binary, skipping PHP code minify'

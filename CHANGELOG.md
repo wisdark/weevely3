@@ -1,5 +1,35 @@
 # Change Log
 
+## [v3.7.0] - 2018-10-15
+### Fixed
+- Fix vector handling in audit_etcpasswd #93
+
+### Added
+- HTTPS proxy support
+- Support OPTIONS request in net_curl module
+- Use httpbin for net_proxy testing
+
+## [v3.6.2] - 2018-06-27
+### Fixed
+- Remove audit_linuxprivchecker module
+
+## [v3.6.1] - 2018-06-26
+### Fixed
+- Fixed corrupted session file #83
+- Vendor files licensing
+
+### Added
+- Man page
+
+## [v3.6] - 2018-06-02
+### Fixed
+- PHP 7 support
+- Add exceptions catches
+
+### Added
+- ObfPost is the default channel to obfuscate traffic in POST requests
+- Travic-CI integration
+
 ## [v3.5] - 2017-23-11
 ### Fixed
 - Connection to HTTPS sites with wrong certificates
