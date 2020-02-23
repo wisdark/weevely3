@@ -1,5 +1,24 @@
 # Change Log
 
+## [v4.0.1] - 2020-01-06
+### Removed
+- Remove PHP minification
+
+### Fixed
+- Broken cd #122
+
+## [v4.0.0] - 2019-12-26
+### Added
+- Full port to Python 3
+
+### Fixed
+- Module net_phpproxy
+- Fixes alias management #117
+
+### Removed
+- Old backdoor formats LegacyCookie, LegacyReferrer, and Stegaref
+- Module backdoor_meterpreter
+
 ## [v3.7.0] - 2018-10-15
 ### Fixed
 - Fix vector handling in audit_etcpasswd #93
@@ -127,3 +146,10 @@
 [v3.2.0]: https://github.com/epinna/weevely3/releases/tag/v3.2.0
 [v3.3.1]: https://github.com/epinna/weevely3/releases/tag/v3.3.1
 [v3.4]: https://github.com/epinna/weevely3/releases/tag/v3.4
+[v3.5]: https://github.com/epinna/weevely3/releases/tag/v3.5
+[v3.6]: https://github.com/epinna/weevely3/releases/tag/v3.6
+[v3.6.1]: https://github.com/epinna/weevely3/releases/tag/v3.6.1
+[v3.6.2]: https://github.com/epinna/weevely3/releases/tag/v3.6.2
+[v3.7.0]: https://github.com/epinna/weevely3/releases/tag/v3.7.0
+[v4.0.0]: https://github.com/epinna/weevely3/releases/tag/v4.0.0
+[v4.0.1]: https://github.com/epinna/weevely3/releases/tag/v4.0.1

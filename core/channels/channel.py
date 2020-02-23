@@ -1,11 +1,11 @@
 from core.weexceptions import ChannelException
-from urllib2 import HTTPError, URLError
+from urllib.error import HTTPError, URLError
 from core import messages
 from core.loggers import log, dlog
 import utils
 import socks
 import sockshandler
-import urllib2
+import urllib.request, urllib.error, urllib.parse
 import re
 import ssl
 
@@ -93,13 +93,13 @@ class Channel:
         ctx.check_hostname = False
         ctx.verify_mode = ssl.CERT_NONE
         
-        handlers.append(urllib2.HTTPSHandler(context=ctx))
+        handlers.append(urllib.request.HTTPSHandler(context=ctx))
 
         return handlers
 
     def send(self, payload):
 
-        response = ''
+        response = b''
         code = 200
         error = ''
 
@@ -141,6 +141,7 @@ class Channel:
         if response:
             dlog.info('RESPONSE: %s' % repr(response))
         else:
+            response = b''
             command_last_chars = utils.prettify.shorten(
                                     payload.rstrip(),
                                     keep_trailer = 10
@@ -149,10 +150,10 @@ class Channel:
                 command_last_chars and
                 command_last_chars[-1] not in ( ';', '}' )
                 ):
-                log.warn(messages.module_shell_php.missing_php_trailer_s % command_last_chars)
+                log.warning(messages.module_shell_php.missing_php_trailer_s % command_last_chars)
 
         if error or human_error:
             log.debug('[ERR] %s [%s]' % (error, code))
-            log.warn(human_error)
+            log.warning(human_error)
 
         return response, code, error

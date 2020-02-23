@@ -118,7 +118,7 @@ class Module:
 
         self.print_result(
             result[:-1] if (
-                isinstance(result, basestring) and
+                isinstance(result, str) and
                 result.endswith('\n')
             ) else result
         )

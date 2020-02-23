@@ -9,36 +9,36 @@ def tablify(data, table_border = True):
     output = ''
 
     # Empty outputs. False is probably a good output value
-    if data and not data:
+    if data != False and not data:
         output = ''
     else:
 
         table = prettytable.PrettyTable()
 
         # List outputs.
-        if isinstance(data, (types.ListType, types.TupleType)):
+        if isinstance(data, (list, tuple)):
 
             if len(data) > 0:
 
                 columns_num = 1
-                if isinstance(data[0], (types.ListType, types.TupleType)):
+                if isinstance(data[0], (list, tuple)):
                     columns_num = len(data[0])
 
                 for row in data:
                     if not row:
                         continue
                         
-                    if isinstance(row, (types.ListType, types.TupleType)):
+                    if isinstance(row, (list, tuple)):
                         table.add_row(row)
                     else:
                         table.add_row([row])
 
         # Dict outputs are display as tables
-        elif isinstance(data, types.DictType) and data:
+        elif isinstance(data, dict) and data:
 
             # Populate the rows
-            randomitem = next(data.itervalues())
-            if isinstance(randomitem, (types.ListType, types.TupleType)):
+            randomitem = next(iter(list(data.values())))
+            if isinstance(randomitem, (list, tuple)):
                 for field in data:
                     table.add_row([field] + data[field])
             else:
@@ -47,6 +47,13 @@ def tablify(data, table_border = True):
 
         # Else, try to stringify
         else:
+
+            # Normalize byte-like objects
+            try:
+                data = data.decode('utf-8')
+            except (UnicodeDecodeError, AttributeError):
+                pass
+
             output = str(data)
 
         if not output:
@@ -61,6 +68,12 @@ def shorten(body, keep_header = 0, keep_trailer = 0):
     """
     Smartly shorten a given string.
     """
+
+    # Normalize byte-like objects
+    try:
+        body = body.decode('utf-8')
+    except (UnicodeDecodeError, AttributeError):
+        pass
 
     # Cut header
     if (keep_header

@@ -35,12 +35,9 @@ class Proxy(BaseTest):
 
     def _json_result(self, args, unquoted_args = ''):
         
-        result = self.run_argv(args, unquoted_args)
-        try:
-            return result if not result else json.loads(result)
-        except Exception as e:
-            print(e)
-            self.fail(result)
+        result = self.run_argv(args, unquoted_args).decode('utf-8')
+
+        return result if not result else json.loads(result)
 
     def _headers_result(self, args):
         return self.run_argv(args, unquoted_args = '-sSL -D - -o /dev/null').splitlines()
@@ -49,13 +46,13 @@ class Proxy(BaseTest):
 
         #  HTTPS GET with no SSL check
         self.assertIn(
-            'Google',
+            b'Google',
             self.run_argv([ 'https://www.google.com', '-k' ])
         )
 
         #  HTTPS GET with cacert
         self.assertIn(
-            'Google',
+            b'Google',
             self.run_argv([ 'https://www.google.com' ], unquoted_args='--cacert ~/.weevely/certs/ca.crt')
         )
         
@@ -85,7 +82,7 @@ class Proxy(BaseTest):
         # httpbin, but still it's an accepted VERB which returns 200 OK
         url = self.url + '/anything'
         self.assertEqual(
-            '200 OK',
+            b'200 OK',
             self._headers_result([ url, '-X', 'PUT' ])[0][-6:]
         )
 
@@ -108,7 +105,7 @@ class Proxy(BaseTest):
         url = self.url + '/post'
         result = self._json_result([ url, '--data', 'f1=data1&f2=data2' ])
         self.assertEqual(
-            { u'f1': u'data1', u'f2': u'data2' },
+            { 'f1': 'data1', 'f2': 'data2' },
             result['form']
         )
         self.assertEqual(
@@ -120,21 +117,21 @@ class Proxy(BaseTest):
         url = self.url + '/post'
         result = self._json_result([ url ], unquoted_args="--data FIELD=$(env echo -ne 'D\\x41\\x54A\\x00B')")
         self.assertEqual(
-            { u'FIELD': u'DATAB' },
+            { 'FIELD': 'DATAB' },
             result['form']
         )
 
         # Simple GET with parameters
         url = self.url + '/get?f1=data1&f2=data2'
         self.assertEqual(
-            { u'f1': u'data1', u'f2': u'data2' },
+            { 'f1': 'data1', 'f2': 'data2' },
             self._json_result([ url ])['args']
         )
 
         #  HTTPS GET to test SSL checks are disabled
         google_ip = socket.gethostbyname('www.google.com')
         self.assertIn(
-            'google',
+            b'google',
             self.run_argv([ 'https://' + google_ip, "-k" ])
         )
 
@@ -143,7 +140,7 @@ class Proxy(BaseTest):
         #self.assertIn('Message: Bad Gateway.', self.run_argv([ 'http://co.uk:0' ]))
 
         # FILTERED
-        self.assertIn('Message: Bad Gateway.', self.run_argv([ 'http://www.google.com:9999', '--connect-timeout', '1' ]))
+        self.assertIn(b'Message: Bad Gateway.', self.run_argv([ 'http://www.google.com:9999', '--connect-timeout', '1' ]))
 
         # CLOSED
-        self.assertIn('Message: Bad Gateway.', self.run_argv([ 'http://localhost:9999', '--connect-timeout', '1' ]))
+        self.assertIn(b'Message: Bad Gateway.', self.run_argv([ 'http://localhost:9999', '--connect-timeout', '1' ]))

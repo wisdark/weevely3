@@ -54,7 +54,7 @@ class Download(Module):
 
         # Check remote file existance
         if not ModuleExec('file_check', [ self.args.get('rpath'), 'readable' ]).run():
-            log.warn(messages.module_file_download.failed_download_file)
+            log.warning(messages.module_file_download.failed_download_file)
             return
 
         # Get the remote file MD5. If this is not available, still do a basic check
@@ -74,7 +74,7 @@ class Download(Module):
 
         # Check if find_first_result failed
         if not vector_name:
-            log.warn(messages.module_file_download.failed_download_file)
+            log.warning(messages.module_file_download.failed_download_file)
             return
 
         # Dump to local file
@@ -82,8 +82,9 @@ class Download(Module):
 
         try:
             result_decoded = base64.b64decode(result)
-            open(lpath, 'wb').write(result_decoded)
-        except Exception, e:
+            with open(lpath, 'wb') as resultfile:
+                resultfile.write(result_decoded)
+        except Exception as e:
             log.warning(
               messages.generic.error_loading_file_s_s % (lpath, str(e)))
             return

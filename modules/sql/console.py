@@ -59,9 +59,10 @@ class Console(Module):
     def _query(self, vector, args):
 
         # Randomly generate separators
-        colsep = '----%s' % utils.strings.randstr(6)
-        linsep = '----%s' % utils.strings.randstr(6)
-        errsep = '----%s' % utils.strings.randstr(6)
+        colsep = '----%s' % utils.strings.randstr(6).decode('utf-8')
+        linsep = '----%s' % utils.strings.randstr(6).decode('utf-8')
+        errsep = '----%s' % utils.strings.randstr(6).decode('utf-8')
+
         args.update(
             {'colsep': colsep, 'linsep': linsep, 'errsep': errsep}
         )
@@ -74,9 +75,9 @@ class Console(Module):
         # we wan't the result to be unicode, but depending on the source
         # of the data, it could be encoded differently
         try:
-            result = unicode(result)
+            result = str(result)
         except UnicodeError:
-            result = unicode(result.decode(args.get('encoding')))
+            result = str(result.decode(args.get('encoding')))
         
         # If there is not errstr, something gone really bad (e.g. functions not callable)
         if errsep not in result:
@@ -135,7 +136,7 @@ class Console(Module):
         # Console loop
         while True:
 
-            query = raw_input('%s SQL> ' % user).strip()
+            query = input('%s SQL> ' % user).strip()
 
             if not query:
                 continue

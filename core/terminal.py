@@ -57,7 +57,13 @@ class CmdModules(cmd.Cmd):
                 compfunc = self.completenames
             self.completion_matches = compfunc(text, line, begidx, endidx)
         try:
-            return self.completion_matches[state]
+            if self.completion_matches[state].startswith('alias_'):
+                if self.session.get('default_shell') == 'shell_php':
+                    return self.completion_matches[state][6:]
+                else:
+                    return ''
+            else:
+                return self.completion_matches[state]
         except IndexError:
             return None
 
@@ -74,24 +80,30 @@ class CmdModules(cmd.Cmd):
         cmd, arg, line = self.parseline(line)
         if not line:
             return self.emptyline()
-        if cmd is None:
+        if cmd in (None, ''):
             return self.default(line)
         self.lastcmd = line
         if line == 'EOF' :
             #self.lastcmd = ''
             raise EOFError()
-        if cmd == '':
-            return self.default(line)
         if cmd:
+            # Try running module  command
             try:
                 func = getattr(self, 'do_' + cmd.lstrip(':'))
             except AttributeError:
-                return self.default(line)
+                # If there is no module command, check if we have a PHP shelli
+                # And in case try running alias command
+                if self.session.get('default_shell') == 'shell_php' or cmd.lstrip(':') == 'cd':
+                    try:
+                        func = getattr(self, 'do_alias_' + cmd.lstrip(':'))
+                    except AttributeError:
+                        pass
+                    else:
+                        return func(arg, cmd)
+            else:
+                return func(arg, cmd)
 
-            return func(arg, cmd)
-
-        else:
-            return self.default(line)
+        return self.default(line)
 
     def _print_modules(self):
 
@@ -114,16 +126,16 @@ class CmdModules(cmd.Cmd):
     def do_help(self, arg, command):
         """Fixed help."""
 
-        print
+        print()
 
         self._print_modules()
 
-        if self.session['shell_sh']['status'] == Status.RUN: print; return
+        if self.session['shell_sh']['status'] == Status.RUN: print(); return
 
         log.info(messages.terminal.help_no_shell)
         self._print_command_replacements()
 
-        print
+        print()
 
 
 class Terminal(CmdModules):
@@ -153,10 +165,6 @@ class Terminal(CmdModules):
             default_shell = self.session.get('default_shell')
         )
 
-        # Set default encoding utf8
-        reload(sys)
-        sys.setdefaultencoding('utf8')
-
     def emptyline(self):
         """Disable repetition of last command."""
 
@@ -178,7 +186,6 @@ class Terminal(CmdModules):
                     ):
             return line
 
-
         # Trigger the shell_sh/shell_php probe if
         # 1. We never tried to raise shells (shell_sh = IDLE)
         # 2. The basic intepreter shell_php is not running.
@@ -199,7 +206,7 @@ class Terminal(CmdModules):
             try:
                 self.session['shell_sh']['status'] = modules.loaded['shell_sh'].setup()
             except ChannelException as e:
-                log.error(e.message)
+                log.error(str(e))
                 return ''
 
         # Set default_shell in any case (could have been changed runtime)
@@ -268,7 +275,7 @@ class Terminal(CmdModules):
 
         # Clean trailing newline if existent to prettify output
         result = result[:-1] if (
-                isinstance(result, basestring) and
+                isinstance(result, str) and
                 result.endswith('\n')
             ) else result
 
@@ -286,12 +293,12 @@ class Terminal(CmdModules):
             args = shlex.split(line)
         except Exception as e:
             import traceback; log.debug(traceback.format_exc())
-            log.warn(messages.generic.error_parsing_command_s % str(e))
+            log.warning(messages.generic.error_parsing_command_s % str(e))
 
         # Set the setting
         else:
             if len(args) < 2:
-                log.warn(messages.terminal.set_usage)
+                log.warning(messages.terminal.set_usage)
             elif len(args) >= 2:
                 args[1] = ' '.join(args[1:])
                 self.session.set(args[0], args[1])
@@ -301,7 +308,7 @@ class Terminal(CmdModules):
 
         # Print all settings that startswith args[0]
         if not line:
-            log.warn(messages.terminal.unset_usage)
+            log.warning(messages.terminal.unset_usage)
 
         # Set the setting
         else:
@@ -322,7 +329,7 @@ class Terminal(CmdModules):
             # self.do_alias() for every defined `Module.aliases`.
             for alias in module_class.aliases:
                 setattr(
-                    Terminal, 'do_%s' %
+                    Terminal, 'do_alias_%s' %
                     (alias), module_class.run_alias)
                 setattr(
                     Terminal, 'help_%s' %
