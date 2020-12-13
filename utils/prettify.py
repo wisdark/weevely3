@@ -1,7 +1,7 @@
 import prettytable
 import types
 
-def tablify(data, table_border = True):
+def tablify(data, table_border = True, header=False):
 
     # TODO: Check that is prettytable-0.7.2 that supports the
     # dynamic table columns number setting. Version 0.5 does not.
@@ -9,12 +9,16 @@ def tablify(data, table_border = True):
     output = ''
 
     # Empty outputs. False is probably a good output value
-    if data != False and not data:
+    if data is not False and not data:
         output = ''
     else:
 
         table = prettytable.PrettyTable()
-
+        if header and type(data) is list:
+            table.field_names = data.pop(0)
+            table.header = True
+        else:
+            table.header = False
         # List outputs.
         if isinstance(data, (list, tuple)):
 
@@ -27,7 +31,7 @@ def tablify(data, table_border = True):
                 for row in data:
                     if not row:
                         continue
-                        
+
                     if isinstance(row, (list, tuple)):
                         table.add_row(row)
                     else:
@@ -57,7 +61,6 @@ def tablify(data, table_border = True):
             output = str(data)
 
         if not output:
-            table.header = False
             table.align = 'l'
             table.border = table_border
             output = table.get_string()
@@ -93,3 +96,11 @@ def shorten(body, keep_header = 0, keep_trailer = 0):
             return '%s .. %s' % (body[:keep_header], body[-keep_trailer:])
 
     return body
+
+
+def format_size(size, suffix='o'):
+    for unit in ['', 'K', 'M', 'G', 'T', 'P', 'E', 'Z']:
+        if abs(size) < 1000.0:
+            return "%.3G%s%s" % (size, unit, suffix)
+        size /= 1000.0
+    return "%.3G%s%s" % (size, 'Y', suffix)
