@@ -27,21 +27,23 @@ done
 
 # Build weevely container
 docker build -f tests/docker/Dockerfile . -t weevely
-docker run  --rm --net=weevely-testnet --name weevely-inst -v `pwd`:/app/ -p 80:80 -d weevely 
+docker run  --rm --net=weevely-testnet --name weevely-inst -v `pwd`:/app/ -p 80:80 -d weevely
 
 # Wait until the http server is serving
 until $(curl --output /dev/null --silent --head http://localhost/); do
     sleep 1
 done
 
-if [ -z "$1" ]
-  then
-    docker exec -it weevely-inst python -m unittest discover ./tests/ "test_*.py"
-elif [ "$1" = "bash" ]
-  then
-    docker exec -it weevely-inst /bin/bash
+if [ "$1" = "bash" ]; then
+  docker exec -e "AGENT=$AGENT" -it weevely-inst /bin/bash
 else
-    docker exec -it weevely-inst python -m unittest discover ./tests/ "test_$1.py"
+  for AGENT in agent.php agent.phar; do
+    if [ -z "$1" ]; then
+      docker exec -e "AGENT=$AGENT" -it weevely-inst python -m unittest discover ./tests/ "test_*.py"
+    else
+      docker exec -e "AGENT=$AGENT" -it weevely-inst python -m unittest discover ./tests/ "test_$1.py"
+    fi
+  done
 fi
 
 docker rm -f weevely-inst 

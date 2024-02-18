@@ -1,17 +1,19 @@
-from tests.base_test import BaseTest
+import subprocess
+import unittest
+
 from testfixtures import log_capture
+
+from core import messages
 from core import modules
 from core.sessions import SessionURL
-from core import messages
 from tests import config
-import unittest
-import subprocess
-import os
+from tests.base_test import BaseTest
+
 
 def setUpModule():
     try:
         # This workaround fixes https://github.com/docker/for-linux/issues/72
-        subprocess.check_output("""find /var/lib/mysql -type f -exec touch {} \; && service mysql start""", shell=True)
+        subprocess.check_output("""find /var/lib/mysql -type f -exec touch {} \; && service mariadb start""", shell=True)
     except Exception as e:
         print('[!] Failed mysql')
         print(subprocess.check_output("""grep "" /var/log/mysql/*""", shell=True))
@@ -45,21 +47,25 @@ class MySQLConsole(BaseTest):
                                     messages.module_sql_console.check_credentials),
                          log_captured.records[-2].msg)
 
-
     def test_wronglogin(self):
-
         wrong_login = '-user bogus -passwd bogus -query "select \'A\';"'
 
         # Using run_cmdline to test the outputs
         self.assertIn('Access denied for user', self.run_cmdline(wrong_login)['error'])
 
+    def test_wrong_port(self):
+        wrong_port = ['-user', config.sql_user, '-passwd', config.sql_passwd, '-port', '1234', '-query', 'select 1234;']
+
+        # Using run_cmdline to test the outputs
+        self.assertIn('Cannot assign requested address', self.run_argv(wrong_port)['error'])
+
     def test_login(self):
 
         login = ['-user', config.sql_user, '-passwd', config.sql_passwd ]
 
-        self.assertEqual(self.run_argv(login + [ '-query', "select 'A';"]), { 'error' : ' ', 'result' :  [['A'], ['A']] })
-        self.assertEqual(self.run_argv(login + ['-query', 'select @@hostname;'])['error'], ' ')
-        self.assertEqual(self.run_argv(login + ['-query', 'show databases;'])['error'], ' ')
+        self.assertEqual(self.run_argv(login + [ '-query', "select 'A';"]), { 'error' : '', 'result' :  [['A'], ['A']] })
+        self.assertEqual(self.run_argv(login + ['-query', 'select @@hostname;'])['error'], '')
+        self.assertEqual(self.run_argv(login + ['-query', 'show databases;'])['error'], '')
 
         # The user is returned in the form `[[ user@host ]]`
         self.assertEqual(

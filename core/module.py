@@ -8,21 +8,31 @@ Normally, the following methods have to be overridden:
 * `init()`: This defines the basic module initialization. The `init()` method normally calls `register_info()`, `register_vectors()` and `register_arguments()`.
 * `check()`: This is called at the first run. Check and set the module status.
 * `run()`: This function is called on module run.
-
 """
 
-from core.vectorlist import VectorList
-from core.vectors import ModuleExec
-from core.weexceptions import DevException, ArgparseError
-from core.loggers import log
+import argparse
+import shlex
+
+import utils
 from core import argparsers
 from core import messages
-from mako.template import Template
 from core import modules
-import shlex
-import utils
-import ast
-import os
+from core.loggers import log
+from core.vectorlist import VectorList
+from core.weexceptions import DevException, ArgparseError
+
+
+class Formatter(argparse.ArgumentDefaultsHelpFormatter):
+    def _format_description(self, desc):
+        lines = desc.split('\n')
+        head = lines[0]
+        n = len(head)
+        return head + '\n' + '=' * n + '\n' + '\n'.join(['  ' + l for l in lines[1:]]) + '\n'
+
+    def add_text(self, text):
+        if text is not argparse.SUPPRESS and text is not None:
+            self._add_item(self._format_description, [text])
+
 
 class Status:
     """Represent the module statuses.
@@ -67,8 +77,9 @@ class Module:
 
         # HelpParser is a slightly changed `ArgumentParser`
         self.argparser = argparsers.HelpParser(
-            prog = self.name,
-            description = self.__doc__
+            prog=self.name,
+            description=self.__doc__,
+            formatter_class=Formatter,
         )
 
         # Arguments dictionary is initially empty
@@ -126,7 +137,7 @@ class Module:
         # Data is returned for the testing of _cmdline calls
         return result
 
-    def run_argv(self, argv):
+    def run_argv(self, argv, catch_errors=True):
         """Execute the module.
 
         Get arguments list as argument. The arguments are parsed with getopt,
@@ -136,6 +147,7 @@ class Module:
 
         Args:
             argv (list of str): The list of arguments.
+            catch_errors (bool): Whether to catch remote errors or not. Passed to the base channel
 
         Returns:
             Object. The result of the module execution.
@@ -148,8 +160,8 @@ class Module:
 
         try:
             user_args = self.argparser.parse_args(argv)
-        except SystemExit:
-            raise ArgparseError()
+        except SystemExit as e:
+            raise ArgparseError(e)
 
         # The new arg must win over the stored one if:
         # new arg is not none and the value of the old one 
@@ -188,8 +200,7 @@ class Module:
             if stored_arg_key != None and stored_arg_value != self.args.get(stored_arg_key):
                 self.args[stored_arg_key] = stored_arg_value
 
-
-        return self.run()
+        return self.run(catch_errors=catch_errors)
 
     def run_alias(self, args, cmd):
         """Execute the module to replace a missing terminal command.
@@ -251,7 +262,7 @@ class Module:
 
         return Status.RUN
 
-    def run(self):
+    def run(self, catch_errors=True):
         """Module execution.
 
         Called at every module executions.
