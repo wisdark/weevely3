@@ -12,7 +12,7 @@ from core.config import agent_templates_folder_path, obfuscators_templates_folde
 from core.loggers import log, dlog
 from core.sessions import SessionURL, SessionFile
 from core.terminal import Terminal
-from core.weexceptions import FatalException
+from core.weexceptions import FatalException, ArgparseError
 
 if sys.stdout.encoding is None:
     print("Please set PYTHONIOENCODING=UTF-8 running 'export PYTHONIOENCODING=UTF-8' before starting Weevely.")
@@ -59,7 +59,9 @@ def main(arguments):
     if not arguments.cmd:
         Terminal(session).cmdloop()
     else:
-        Terminal(session).onecmd(arguments.cmd)
+        term = Terminal(session)
+        term.precmd(arguments.cmd)
+        term.onecmd(arguments.cmd)
 
 if __name__ == '__main__':
 
@@ -101,7 +103,10 @@ if __name__ == '__main__':
 
     parser.set_default_subparser('terminal')
 
-    arguments = parser.parse_args()
+    try:
+        arguments = parser.parse_args()
+    except ArgparseError:
+        parser.exit()
 
     try:
         main(arguments)
